@@ -19,15 +19,23 @@ class RewardBadgeModel extends Equatable {
   });
 
   factory RewardBadgeModel.fromJson(Map<String, dynamic> json) {
+    // Handle both camelCase (from backend) and snake_case
+    // Backend sends rewards as objects without IDs, so we generate one
+    final id = json['id']?.toString() ?? 
+               json['_id']?.toString() ?? 
+               '${json['title']}_${json['iconName'] ?? json['icon_name'] ?? 'default'}';
+    
     return RewardBadgeModel(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      iconName: json['icon_name'] as String,
-      colorHex: json['color_hex'] as String,
-      isUnlocked: json['is_unlocked'] as bool,
-      unlockedAt: json['unlocked_at'] != null
-          ? DateTime.parse(json['unlocked_at'] as String)
-          : null,
+      id: id,
+      title: json['title'] as String? ?? 'Unknown',
+      iconName: json['iconName'] ?? json['icon_name'] ?? 'star',
+      colorHex: json['colorHex'] ?? json['color_hex'] ?? '#3b82f6',
+      isUnlocked: json['isUnlocked'] ?? json['is_unlocked'] ?? false,
+      unlockedAt: json['unlockedAt'] != null
+          ? DateTime.tryParse(json['unlockedAt'].toString())
+          : json['unlocked_at'] != null
+              ? DateTime.tryParse(json['unlocked_at'].toString())
+              : null,
     );
   }
 
@@ -92,9 +100,16 @@ class TreasureChestModel extends Equatable {
       isUnlocked: chestData['isUnlocked'] ?? chestData['is_unlocked'] ?? false,
       isClaimed: chestData['isClaimed'] ?? chestData['is_claimed'] ?? false,
       rewards: (chestData['rewards'] as List<dynamic>?)
-          ?.map((reward) => RewardBadgeModel.fromJson(
-                reward as Map<String, dynamic>,
-              ))
+          ?.asMap()
+          .entries
+          .map((entry) {
+            final reward = entry.value as Map<String, dynamic>;
+            // Add index as ID if no ID is provided
+            if (reward['id'] == null && reward['_id'] == null) {
+              reward['id'] = entry.key.toString();
+            }
+            return RewardBadgeModel.fromJson(reward);
+          })
           .toList() ?? [],
       unlockedAt: chestData['unlockedAt'] != null
           ? DateTime.parse(chestData['unlockedAt'] as String)

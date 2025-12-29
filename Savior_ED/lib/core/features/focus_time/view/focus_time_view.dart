@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+import 'package:provider/provider.dart';
 import 'package:savior_ed/core/widgets/timer_duration_picker.dart';
 import 'package:savior_ed/core/widgets/timer_progress_bar.dart';
 import '../../../consts/app_colors.dart';
@@ -10,6 +11,9 @@ import '../../../routes/app_routes.dart';
 import '../../../services/storage_service.dart';
 import '../../../services/app_lock_service.dart';
 import '../../../widgets/permission_request_dialog.dart';
+import '../viewmodels/focus_time_viewmodel.dart';
+import '../../castle_grounds/viewmodels/castle_grounds_viewmodel.dart';
+import '../../profile/viewmodels/profile_viewmodel.dart';
 
 /// Focus Time View - Timer screen with state persistence
 class FocusTimeView extends StatefulWidget {
@@ -30,6 +34,7 @@ class _FocusTimeViewState extends State<FocusTimeView>
   bool _focusLost = false;
   bool _isDialogShowing = false; // Prevent multiple dialogs
   Timer? _timer;
+  String? _sessionId; // Backend session ID
   final StorageService _storageService = StorageService();
   final AppLockService _appLockService = AppLockService();
   bool _hasUsageStatsPermission = false;
@@ -44,6 +49,11 @@ class _FocusTimeViewState extends State<FocusTimeView>
     WidgetsBinding.instance.addObserver(this);
     _checkPermissionAndSetup();
     _loadTimerState();
+    // Load castle data when view opens to show live resources
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final castleViewModel = Provider.of<CastleGroundsViewModel>(context, listen: false);
+      castleViewModel.getMyCastle();
+    });
     // Don't start glitter animation on init - only when focus starts
   }
 
@@ -110,6 +120,14 @@ class _FocusTimeViewState extends State<FocusTimeView>
   Future<void> _loadTimerState() async {
     await _storageService.ensureInitialized();
 
+    // Load saved session ID
+    final savedSessionId = _storageService.getString('timer_session_id');
+    if (savedSessionId != null) {
+      setState(() {
+        _sessionId = savedSessionId;
+      });
+    }
+
     final savedTotalSeconds = _storageService.getInt('timer_total_seconds');
     final savedIsRunning = _storageService.getBool('timer_is_running') ?? false;
     final savedIsPaused = _storageService.getBool('timer_is_paused') ?? true;
@@ -138,6 +156,8 @@ class _FocusTimeViewState extends State<FocusTimeView>
           );
 
           if (_totalSeconds > 0) {
+            // Update display immediately with calculated time
+            _updateDisplay();
             // Continue timer - only restart if not already running
             if (_timer == null || !_timer!.isActive) {
               _startTimer();
@@ -149,6 +169,7 @@ class _FocusTimeViewState extends State<FocusTimeView>
           } else {
             // Timer completed while away
             _totalSeconds = 0;
+            _updateDisplay();
             _stopTimer();
             _showCompletionDialog();
           }
@@ -160,8 +181,6 @@ class _FocusTimeViewState extends State<FocusTimeView>
           );
           _updateDisplay();
         }
-
-        _updateDisplay();
       });
       
       // Show timer overlay if timer is running and not paused
@@ -207,11 +226,16 @@ class _FocusTimeViewState extends State<FocusTimeView>
       _totalSeconds = minutes * 60;
       _isRunning = false;
       _isPaused = true;
-      _updateDisplay();
     });
-    // Clear start time when setting new duration
+    // Update display immediately after setting duration
+    _updateDisplay();
+    // Clear start time and session ID when setting new duration
     await _storageService.ensureInitialized();
     await _storageService.remove('timer_start_time');
+    setState(() {
+      _sessionId = null;
+    });
+    await _storageService.remove('timer_session_id');
     await _saveTimerState();
   }
 
@@ -428,13 +452,21 @@ class _FocusTimeViewState extends State<FocusTimeView>
     };
 
     // Set up callback for overlay actions
-    _appLockService.onOverlayAction = (String action) {
+    _appLockService.onOverlayAction = (String action) async {
       print('🚨 Overlay action received: $action');
       if (mounted) {
         if (action == 'exit_battle') {
-          // Exit battle - stop timer and go to castle grounds
+          // Exit battle - complete session first to get rewards, then stop timer and go to castle grounds
+          if (_sessionId != null && _isRunning) {
+            final elapsedSeconds = (_initialDurationMinutes * 60) - _totalSeconds;
+            if (elapsedSeconds > 0) {
+              await _completeBackendSession();
+            }
+          }
           _stopTimer();
-          Navigator.pushReplacementNamed(context, AppRoutes.castleGrounds);
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, AppRoutes.castleGrounds);
+          }
         } else if (action == 'stay_focused') {
           // Stay focused - just save state and continue
           _saveTimerState();
@@ -454,10 +486,16 @@ class _FocusTimeViewState extends State<FocusTimeView>
     _isRunning = true;
     _isPaused = false;
     
+    // Update display immediately to show current time
+    _updateDisplay();
+    
     // Save timer start time only if it doesn't exist (fresh start, not resume)
     await _storageService.ensureInitialized();
     final existingStartTime = _storageService.getString('timer_start_time');
-    if (existingStartTime == null) {
+    
+    // Create backend session if this is a fresh start (not resuming)
+    if (existingStartTime == null && _sessionId == null) {
+      await _createBackendSession();
       await _saveTimerStartTime();
     } else {
       print('⏰ timer_start_time already exists: $existingStartTime (not overwriting)');
@@ -502,13 +540,15 @@ class _FocusTimeViewState extends State<FocusTimeView>
           _totalSeconds--;
           _updateDisplay();
         });
-        // Save state every 5 seconds
+        // Save state every 5 seconds and update backend session
         if (_totalSeconds % 5 == 0) {
           await _saveTimerState();
+          await _updateBackendSession();
         }
       } else {
         _stopTimer();
         await _saveTimerState();
+        await _completeBackendSession();
         _showCompletionDialog();
       }
     });
@@ -526,6 +566,8 @@ class _FocusTimeViewState extends State<FocusTimeView>
         _sparkleAnimationController?.stop();
         // Keep glitter animation running even when paused
         await _saveTimerState();
+        // Update backend session with pause state
+        await _updateBackendSession();
         // Hide timer overlay when paused
         await _appLockService.hideTimerOverlay();
       } else {
@@ -540,19 +582,23 @@ class _FocusTimeViewState extends State<FocusTimeView>
         await _saveTimerState();
         // Show timer overlay when resumed
         await _appLockService.showTimerOverlay();
+        // Update backend session with resume state
+        await _updateBackendSession();
         _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
           if (_totalSeconds > 0) {
             setState(() {
               _totalSeconds--;
               _updateDisplay();
             });
-            // Save state every 5 seconds
+            // Save state every 5 seconds and update backend session
             if (_totalSeconds % 5 == 0) {
               await _saveTimerState();
+              await _updateBackendSession();
             }
           } else {
             _stopTimer();
             await _saveTimerState();
+            await _completeBackendSession();
             _showCompletionDialog();
           }
         });
@@ -609,6 +655,108 @@ class _FocusTimeViewState extends State<FocusTimeView>
       _updateDisplay();
     });
     _saveTimerState();
+  }
+
+  /// Create backend session when timer starts
+  Future<void> _createBackendSession() async {
+    try {
+      final focusTimeViewModel = Provider.of<FocusTimeViewModel>(context, listen: false);
+      final session = await focusTimeViewModel.createSession(_initialDurationMinutes);
+      if (session != null) {
+        setState(() {
+          _sessionId = session.id;
+        });
+        // Store session ID in local storage
+        await _storageService.saveString('timer_session_id', _sessionId!);
+        print('✅ Backend session created: $_sessionId');
+      }
+    } catch (e) {
+      print('⚠️ Failed to create backend session: $e');
+      // Continue even if session creation fails
+    }
+  }
+
+  /// Update backend session with current progress
+  Future<void> _updateBackendSession() async {
+    if (_sessionId == null) return;
+    try {
+      final focusTimeViewModel = Provider.of<FocusTimeViewModel>(context, listen: false);
+      final elapsedSeconds = (_initialDurationMinutes * 60) - _totalSeconds;
+      await focusTimeViewModel.updateSession(
+        sessionId: _sessionId!,
+        totalSeconds: elapsedSeconds,
+        isRunning: _isRunning,
+        isPaused: _isPaused,
+        focusLost: _focusLost,
+      );
+      print('✅ Backend session updated: elapsed $elapsedSeconds seconds');
+    } catch (e) {
+      print('⚠️ Failed to update backend session: $e');
+      // Continue even if update fails
+    }
+  }
+
+  /// Complete backend session when timer ends
+  Future<void> _completeBackendSession() async {
+    if (_sessionId == null) return;
+    try {
+      final focusTimeViewModel = Provider.of<FocusTimeViewModel>(context, listen: false);
+      // Calculate elapsed seconds based on current timer state
+      final completedSeconds = (_initialDurationMinutes * 60) - _totalSeconds;
+      
+      // Only complete if there's actual time elapsed (at least 1 second)
+      if (completedSeconds <= 0) {
+        print('⚠️ No time elapsed, skipping session completion');
+        // Clear session ID even if no time elapsed
+        setState(() {
+          _sessionId = null;
+        });
+        await _storageService.remove('timer_session_id');
+        return;
+      }
+      
+      print('✅ Completing session with $completedSeconds seconds (${(completedSeconds / 60).toStringAsFixed(1)} minutes)');
+      final rewards = await focusTimeViewModel.completeSession(
+        sessionId: _sessionId!,
+        totalSeconds: completedSeconds,
+      );
+      
+      if (rewards != null) {
+        print('✅ Session completed! Rewards: $rewards');
+        print('   - Coins: ${rewards['coins'] ?? 0}');
+        print('   - XP: ${rewards['xp'] ?? 0}');
+        
+        // Refresh castle and profile data to show updated stats
+        final castleViewModel = Provider.of<CastleGroundsViewModel>(context, listen: false);
+        final profileViewModel = Provider.of<ProfileViewModel>(context, listen: false);
+        await Future.wait([
+          castleViewModel.getMyCastle(),
+          profileViewModel.refresh(),
+        ]);
+        
+        // Notify listeners to update UI with new data
+        if (mounted) {
+          setState(() {
+            // Force UI rebuild to show updated resources
+          });
+        }
+      } else {
+        print('⚠️ Session completion returned no rewards');
+      }
+      
+      // Clear session ID
+      setState(() {
+        _sessionId = null;
+      });
+      await _storageService.remove('timer_session_id');
+    } catch (e) {
+      print('⚠️ Failed to complete backend session: $e');
+      // Continue even if completion fails, but clear session ID
+      setState(() {
+        _sessionId = null;
+      });
+      await _storageService.remove('timer_session_id');
+    }
   }
 
   void _showCompletionDialog() {
@@ -825,18 +973,27 @@ class _FocusTimeViewState extends State<FocusTimeView>
                             borderRadius: BorderRadius.circular(20.sp),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(20.sp),
-                              onTap: () {
+                              onTap: () async {
                                 if (!mounted) return;
                                 Navigator.of(context).pop();
                                 setState(() {
                                   _isDialogShowing = false;
                                   _focusLost = false;
                                 });
+                                // Complete the session first to get rewards for time spent
+                                if (_sessionId != null && _isRunning) {
+                                  final elapsedSeconds = (_initialDurationMinutes * 60) - _totalSeconds;
+                                  if (elapsedSeconds > 0) {
+                                    await _completeBackendSession();
+                                  }
+                                }
                                 _stopTimer();
-                                Navigator.pushReplacementNamed(
-                                  context,
-                                  AppRoutes.castleGrounds,
-                                );
+                                if (mounted) {
+                                  Navigator.pushReplacementNamed(
+                                    context,
+                                    AppRoutes.castleGrounds,
+                                  );
+                                }
                               },
                               child: Container(
                                 padding: EdgeInsets.symmetric(
@@ -1005,24 +1162,33 @@ class _FocusTimeViewState extends State<FocusTimeView>
                 },
               ),
               centerTitle: true,
-              title: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildResourceIcon(
-                    Icons.monetization_on,
-                    AppColors.coinGold,
-                    '1280',
-                  ),
-                  SizedBox(width: 1.5.w),
-                  _buildResourceIcon(
-                    Icons.construction,
-                    AppColors.stoneGray,
-                    '875',
-                  ),
-                  SizedBox(width: 1.5.w),
-                  _buildResourceIcon(Icons.forest, AppColors.woodBrown, '500'),
-                ],
+              title: Consumer<CastleGroundsViewModel>(
+                builder: (context, castleViewModel, child) {
+                  final castle = castleViewModel.castle;
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildResourceIcon(
+                        Icons.monetization_on,
+                        AppColors.coinGold,
+                        '${castle?.coins ?? 0}',
+                      ),
+                      SizedBox(width: 1.5.w),
+                      _buildResourceIcon(
+                        Icons.construction,
+                        AppColors.stoneGray,
+                        '${castle?.stones ?? 0}',
+                      ),
+                      SizedBox(width: 1.5.w),
+                      _buildResourceIcon(
+                        Icons.forest,
+                        AppColors.woodBrown,
+                        '${castle?.wood ?? 0}',
+                      ),
+                    ],
+                  );
+                },
               ),
               actions: [
                 IconButton(
@@ -1116,7 +1282,7 @@ class _FocusTimeViewState extends State<FocusTimeView>
                                 width: 65.w,
                                 height: 65.w,
                                     child: CircularProgressIndicator(
-                                      value: _progress,
+                                      value: _progress.clamp(0.0, 1.0),
                                       strokeWidth: 8.sp,
                                   backgroundColor: Colors.white.withOpacity(
                                     0.2,
@@ -1131,7 +1297,7 @@ class _FocusTimeViewState extends State<FocusTimeView>
                                 width: 58.w,
                                 height: 58.w,
                                 child: CircularProgressIndicator(
-                                  value: _progress,
+                                  value: _progress.clamp(0.0, 1.0),
                                   strokeWidth: 16.sp, // Increased from 4.sp to 6.sp
                                   backgroundColor: Colors.transparent,
                                   valueColor: AlwaysStoppedAnimation<Color>(
@@ -1147,7 +1313,7 @@ class _FocusTimeViewState extends State<FocusTimeView>
                                     children: [
                                       // House image in center
                                   SizedBox(height: 0.8.h),
-                                  // Timer text - centered in circle
+                                  // Timer text - centered in circle (updates live)
                                       Text(
                                         '${_minutes.toString().padLeft(2, '0')}:${_seconds.toString().padLeft(2, '0')}',
                                         style: TextStyle(
@@ -1183,9 +1349,7 @@ class _FocusTimeViewState extends State<FocusTimeView>
                           padding: EdgeInsets.symmetric(horizontal: 7.w),
                           child: TimerProgressBar(
                                 label: 'TIME LEFT',
-                            
-                                progress: _progress,
-
+                                progress: _progress.clamp(0.0, 1.0),
                           ),
                         ),
 
@@ -1241,6 +1405,15 @@ class _FocusTimeViewState extends State<FocusTimeView>
                                 color: Colors.transparent,
                                 child: InkWell(
                                   onTap: () async {
+                                    // Complete the session first to get rewards
+                                    if (_sessionId != null && _isRunning) {
+                                      // Calculate elapsed time before stopping
+                                      final elapsedSeconds = (_initialDurationMinutes * 60) - _totalSeconds;
+                                      if (elapsedSeconds > 0) {
+                                        // Only complete if there's actual time elapsed (at least 1 second)
+                                        await _completeBackendSession();
+                                      }
+                                    }
                                     _stopTimer();
                                     await _saveTimerState();
                                     if (mounted) {

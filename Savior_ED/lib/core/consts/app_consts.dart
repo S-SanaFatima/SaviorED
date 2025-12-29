@@ -4,8 +4,8 @@ class AppConsts {
   static const String appName = 'Savior ED';
   
   // API
-  static const String baseUrl = 'http://localhost:5000'; // Change to your server URL
-  static const Duration apiTimeout = Duration(seconds: 30);
+  static const String baseUrl = 'https://saviored-backend-production.up.railway.app';
+  static const Duration apiTimeout = Duration(seconds: 60); // Increased for Railway cold starts
   
   // Storage Keys
   static const String tokenKey = 'auth_token';

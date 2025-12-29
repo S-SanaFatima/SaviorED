@@ -437,8 +437,17 @@ class _SignUpViewState extends State<SignUpView> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(50.sp),
-          onTap: () {
-            // Handle Google sign in
+          onTap: () async {
+            final authViewModel = context.read<AuthViewModel>();
+            final success = await authViewModel.loginWithGoogle();
+            if (!mounted) return;
+            if (!success) {
+              ToastService.showError(
+                context,
+                title: "Google Sign In",
+                description: authViewModel.errorMessage ?? "Google sign in is not available. Please use email/password.",
+              );
+            }
           },
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

@@ -43,7 +43,7 @@ class TimerProgressBar extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(7.sp), // Reduced from 10.sp to 7.sp
               child: LinearProgressIndicator(
-                value: progress,
+                value: progress.clamp(0.0, 1.0),
                 backgroundColor: Colors.transparent,
                 valueColor: AlwaysStoppedAnimation<Color>(
                   const Color.fromARGB(255, 60, 231, 65), // Bright green color

@@ -5,6 +5,9 @@ import '../features/castle_grounds/viewmodels/castle_grounds_viewmodel.dart';
 import '../features/focus_time/viewmodels/focus_time_viewmodel.dart';
 import '../features/treasure_chest/viewmodels/treasure_chest_viewmodel.dart';
 import '../features/leaderboard/viewmodels/leaderboard_viewmodel.dart';
+import '../features/profile/viewmodels/profile_viewmodel.dart';
+import '../features/inventory/viewmodels/inventory_viewmodel.dart';
+import '../features/inventory/viewmodels/component_viewmodel.dart';
 
 /// App Providers - Centralized provider setup
 class AppProviders {
@@ -22,6 +25,15 @@ class AppProviders {
     ),
     ChangeNotifierProvider<LeaderboardViewModel>(
       create: (_) => LeaderboardViewModel(),
+    ),
+    ChangeNotifierProvider<ProfileViewModel>(
+      create: (_) => ProfileViewModel(),
+    ),
+    ChangeNotifierProvider<InventoryViewModel>(
+      create: (_) => InventoryViewModel(),
+    ),
+    ChangeNotifierProvider<ComponentViewModel>(
+      create: (_) => ComponentViewModel(),
     ),
   ];
 

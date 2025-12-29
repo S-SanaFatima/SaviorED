@@ -4,6 +4,7 @@ import 'package:savior_ed/core/features/castle_grounds/view/castle_ground_view.d
 import 'package:savior_ed/core/features/treasure_chest/view/treasure_chest_view.dart';
 import 'package:savior_ed/core/features/leaderboard/view/leaderboard_view.dart';
 import 'package:savior_ed/core/features/profile/view/profile_view.dart';
+import 'package:savior_ed/core/features/inventory/view/inventory_view.dart';
 import '../features/authentication/views/splash_view.dart';
 import '../features/authentication/views/onboarding_view.dart';
 import '../features/authentication/views/welcome_view.dart';
@@ -24,6 +25,7 @@ class AppRoutes {
   static const String treasureChest = '/treasure-chest';
   static const String leaderboard = '/leaderboard';
   static const String profile = '/profile';
+  static const String inventory = '/inventory';
 
   // Private constructor to prevent instantiation
   AppRoutes._();
@@ -50,5 +52,6 @@ class AppRoutes {
     treasureChest: (context) => const TreasureChestView(),
     leaderboard: (context) => const LeaderboardView(),
     profile: (context) => const ProfileView(),
+    inventory: (context) => const InventoryView(),
   };
 }
