@@ -264,11 +264,14 @@ class AuthViewModel extends ChangeNotifier {
 
       // Try native Google Sign-In first (better UX)
       try {
-        // Initialize GoogleSignIn with the Android OAuth client ID
+        // Initialize GoogleSignIn
+        // Note: For Android, the OAuth client is automatically detected from google-services.json
+        // serverClientId is optional - only needed if you want to get ID token for backend
+        // If you have a Web OAuth client ID, use it here for ID token support
         final GoogleSignIn googleSignIn = GoogleSignIn(
           scopes: ['email', 'profile'],
-          // serverClientId is required to get ID token for backend verification
-          serverClientId: AppConsts.googleClientId,
+          // Remove serverClientId for now - Android client should work without it
+          // If you need ID token, create a Web OAuth client and use its ID here
         );
 
         // Sign out first to ensure fresh sign-in
