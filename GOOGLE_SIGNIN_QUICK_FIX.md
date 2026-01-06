@@ -1,4 +1,4 @@
-# Quick Fix: Google Sign-In "redirect_uri_mismatch" Error
+Quick Fix: Google Sign-In "redirect_uri_mismatch" Error
 
 ## 🔴 The Problem
 
@@ -83,4 +83,3 @@ keytool -list -v -keystore "%USERPROFILE%\.android\debug.keystore" -alias androi
 ## 📚 Full Documentation
 
 See `GOOGLE_SIGNIN_SETUP.md` for detailed instructions.
-

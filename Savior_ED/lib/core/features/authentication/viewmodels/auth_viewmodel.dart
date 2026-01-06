@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../../services/storage_service.dart';
 import '../../../services/api_service.dart';
+import '../../../services/analytics_service.dart';
 import '../../../consts/app_consts.dart';
 import '../models/user_model.dart';
 
@@ -167,6 +168,10 @@ class AuthViewModel extends ChangeNotifier {
         }
         await _storageService.saveBool('is_authenticated', true);
 
+        // Analytics: Log signup and set user ID
+        await AnalyticsService.logSignUp(signUpMethod: 'email');
+        await AnalyticsService.setUserId(_user!.id);
+
         _setLoading(false);
         notifyListeners();
         return true;
@@ -259,11 +264,11 @@ class AuthViewModel extends ChangeNotifier {
 
       // Try native Google Sign-In first (better UX)
       try {
-        // Initialize GoogleSignIn - serverClientId is optional but recommended for backend token verification
+        // Initialize GoogleSignIn with the Android OAuth client ID
         final GoogleSignIn googleSignIn = GoogleSignIn(
           scopes: ['email', 'profile'],
-          // serverClientId is optional - if you have a web OAuth client ID, you can add it here
-          // This helps with backend token verification but is not required for basic sign-in
+          // serverClientId is required to get ID token for backend verification
+          serverClientId: AppConsts.googleClientId,
         );
 
         // Sign out first to ensure fresh sign-in
@@ -322,6 +327,10 @@ class AuthViewModel extends ChangeNotifier {
             await _storageService.saveString('user_avatar', _user!.avatar!);
           }
           await _storageService.saveBool('is_authenticated', true);
+
+          // Analytics: Log login and set user ID
+          await AnalyticsService.logLogin(loginMethod: 'google');
+          await AnalyticsService.setUserId(_user!.id);
 
           _setLoading(false);
           notifyListeners();

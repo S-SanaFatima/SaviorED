@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../../../services/api_service.dart';
+import '../../../services/analytics_service.dart';
 import '../models/treasure_chest_model.dart';
 
 class TreasureChestViewModel extends ChangeNotifier {
@@ -108,6 +109,10 @@ class TreasureChestViewModel extends ChangeNotifier {
 
       if (response.data['success'] == true) {
         _treasureChest = TreasureChestModel.fromJson(response.data);
+        
+        // Analytics: Log treasure chest opened
+        await AnalyticsService.logTreasureChestOpened();
+        
         setLoading(false);
         notifyListeners();
         return true;

@@ -20,8 +20,14 @@ class _CastleGroundsViewState extends State<CastleGroundsView> {
     super.initState();
     // Load data when view opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final castleViewModel = Provider.of<CastleGroundsViewModel>(context, listen: false);
-      final profileViewModel = Provider.of<ProfileViewModel>(context, listen: false);
+      final castleViewModel = Provider.of<CastleGroundsViewModel>(
+        context,
+        listen: false,
+      );
+      final profileViewModel = Provider.of<ProfileViewModel>(
+        context,
+        listen: false,
+      );
       castleViewModel.getMyCastle();
       profileViewModel.loadProfile();
     });
@@ -40,9 +46,7 @@ class _CastleGroundsViewState extends State<CastleGroundsView> {
               width: 70,
               height: 70,
               errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: const Color(0xFFA6B57E),
-                );
+                return Container(color: const Color(0xFFA6B57E));
               },
             ),
           ),
@@ -109,7 +113,10 @@ class _CastleGroundsViewState extends State<CastleGroundsView> {
                     builder: (context, castleViewModel, child) {
                       final castle = castleViewModel.castle;
                       return Container(
-                        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 4.w,
+                          vertical: 1.h,
+                        ),
                         color: const Color(0xFFA6B57E), // Match AppBar color
                         child: Wrap(
                           alignment: WrapAlignment.center,
@@ -138,7 +145,10 @@ class _CastleGroundsViewState extends State<CastleGroundsView> {
                   ),
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 4.w,
+                        vertical: 2.h,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -161,18 +171,19 @@ class _CastleGroundsViewState extends State<CastleGroundsView> {
                             ),
                           ),
                           SizedBox(height: 2.h),
+
                           // Centered final_house.jpg image - matching screenshot exactly
-                        
                           SizedBox(height: 35.h),
                           // Level & Progress - matching timer progress bar design
                           Consumer2<CastleGroundsViewModel, ProfileViewModel>(
                             builder: (context, castleViewModel, profileViewModel, child) {
                               final castle = castleViewModel.castle;
-                              final progress = (castle?.progressPercentage ?? 0.0) / 100.0;
+                              final progress =
+                                  (castle?.progressPercentage ?? 0.0) / 100.0;
                               final level = castle?.level ?? 1;
                               final levelName = castle?.levelName ?? 'CASTLE';
                               final nextLevel = castle?.nextLevel ?? level + 1;
-                              
+
                               return Container(
                                 padding: EdgeInsets.symmetric(horizontal: 4.w),
                                 child: Column(
@@ -191,26 +202,42 @@ class _CastleGroundsViewState extends State<CastleGroundsView> {
                                     SizedBox(height: 1.h),
                                     // Progress bar - same design as timer progress bar
                                     Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 2.w),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 2.w,
+                                      ),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.center,
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           // Progress bar
                                           Container(
-                                            height: 10.sp, // Same height as timer progress bar
+                                            height: 10
+                                                .sp, // Same height as timer progress bar
                                             decoration: BoxDecoration(
-                                              borderRadius: BorderRadius.circular(7.sp), // Same border radius
-                                              color: AppColors.textDisabled.withOpacity(0.2),
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                    7.sp,
+                                                  ), // Same border radius
+                                              color: AppColors.textDisabled
+                                                  .withOpacity(0.2),
                                             ),
                                             child: ClipRRect(
-                                              borderRadius: BorderRadius.circular(7.sp),
+                                              borderRadius:
+                                                  BorderRadius.circular(7.sp),
                                               child: LinearProgressIndicator(
                                                 value: progress.clamp(0.0, 1.0),
-                                                backgroundColor: Colors.transparent,
-                                                valueColor: AlwaysStoppedAnimation<Color>(
-                                                  Colors.lightBlue.shade300, // Light blue color
-                                                ),
+                                                backgroundColor:
+                                                    Colors.transparent,
+                                                valueColor:
+                                                    AlwaysStoppedAnimation<
+                                                      Color
+                                                    >(
+                                                      Colors
+                                                          .lightBlue
+                                                          .shade300, // Light blue color
+                                                    ),
                                                 minHeight: 10.sp,
                                               ),
                                             ),
@@ -221,7 +248,8 @@ class _CastleGroundsViewState extends State<CastleGroundsView> {
                                             '${(progress * 100).toStringAsFixed(0)}% TO LEVEL $nextLevel',
                                             style: TextStyle(
                                               fontSize: 12.sp,
-                                              color: Colors.white, // White color
+                                              color:
+                                                  Colors.white, // White color
                                               fontWeight: FontWeight.bold,
                                             ),
                                             textAlign: TextAlign.center,
@@ -242,9 +270,24 @@ class _CastleGroundsViewState extends State<CastleGroundsView> {
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
                                 _buildCircularActionButton(
+                                  Icons.build,
+                                  'BUILD BASE',
+                                  () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      AppRoutes.baseBuilding,
+                                    );
+                                  },
+                                ),
+                                _buildCircularActionButton(
                                   Icons.castle,
                                   'VIEW CASTLE',
-                                  () {},
+                                  () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      AppRoutes.castleBuild,
+                                    );
+                                  },
                                 ),
                                 _buildCircularActionButton(
                                   Icons.card_giftcard,
@@ -280,7 +323,10 @@ class _CastleGroundsViewState extends State<CastleGroundsView> {
                                   Icons.access_time,
                                   'FOCUS',
                                   () {
-                                    Navigator.pushNamed(context, AppRoutes.focusTime);
+                                    Navigator.pushNamed(
+                                      context,
+                                      AppRoutes.focusTime,
+                                    );
                                   },
                                 ),
                               ],
@@ -292,11 +338,18 @@ class _CastleGroundsViewState extends State<CastleGroundsView> {
                             padding: EdgeInsets.symmetric(horizontal: 4.w),
                             child: Material(
                               color: Colors.lightBlue.shade300,
-                              borderRadius: BorderRadius.circular(20.sp), // More rounded corners
+                              borderRadius: BorderRadius.circular(
+                                20.sp,
+                              ), // More rounded corners
                               child: InkWell(
-                                borderRadius: BorderRadius.circular(20.sp), // More rounded corners
+                                borderRadius: BorderRadius.circular(
+                                  20.sp,
+                                ), // More rounded corners
                                 onTap: () {
-                                  Navigator.pushNamed(context, AppRoutes.focusTime);
+                                  Navigator.pushNamed(
+                                    context,
+                                    AppRoutes.focusTime,
+                                  );
                                 },
                                 child: Container(
                                   padding: EdgeInsets.symmetric(
@@ -599,9 +652,7 @@ class _CastleGroundsViewState extends State<CastleGroundsView> {
       ),
       onTap: onTap,
       hoverColor: Colors.white.withOpacity(0.1),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     );
   }
 }

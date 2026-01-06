@@ -8,6 +8,7 @@ import '../features/leaderboard/viewmodels/leaderboard_viewmodel.dart';
 import '../features/profile/viewmodels/profile_viewmodel.dart';
 import '../features/inventory/viewmodels/inventory_viewmodel.dart';
 import '../features/inventory/viewmodels/component_viewmodel.dart';
+import '../features/base_building/viewmodels/base_building_viewmodel.dart';
 
 /// App Providers - Centralized provider setup
 class AppProviders {
@@ -34,6 +35,9 @@ class AppProviders {
     ),
     ChangeNotifierProvider<ComponentViewModel>(
       create: (_) => ComponentViewModel(),
+    ),
+    ChangeNotifierProvider<BaseBuildingViewModel>(
+      create: (_) => BaseBuildingViewModel(),
     ),
   ];
 

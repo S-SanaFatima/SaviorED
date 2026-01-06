@@ -30,6 +30,10 @@ dependencies:
   url_launcher: ^6.2.5
   google_sign_in: ^6.2.1
   
+  # Firebase
+  firebase_core: ^3.6.0
+  firebase_analytics: ^11.3.3
+  
   # Video Player
   video_player: ^2.8.2
 
@@ -58,3 +62,9 @@ flutter:
     - assets/images/onboarding.png
     - assets/images/pause.png
     - assets/images/end.png
+    - assets/images/green_grass_grid_base.png
+    - assets/images/castle_wall_assets.png
+    - assets/images/kingdom_boundary_border.png
+    - assets/images/kingdom_boundary_border_wide.png
+    - assets/images/kingdom_boundary_final.png
+    - assets/images/level1/

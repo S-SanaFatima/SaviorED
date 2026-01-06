@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "137634393316",
+    "project_id": "saviored-c90a4",
+    "storage_bucket": "saviored-c90a4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:137634393316:android:6931530c97920655e2d0f1",
+        "android_client_info": {
+          "package_name": "com.example.savior_ed"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAnnkrN6Czi98o3ukPdz3iEJ2S7untRFRo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -10,6 +10,7 @@ import '../../../widgets/custom_button.dart';
 import '../../../routes/app_routes.dart';
 import '../../../services/storage_service.dart';
 import '../../../services/app_lock_service.dart';
+import '../../../services/analytics_service.dart';
 import '../../../widgets/permission_request_dialog.dart';
 import '../viewmodels/focus_time_viewmodel.dart';
 import '../../castle_grounds/viewmodels/castle_grounds_viewmodel.dart';
@@ -669,6 +670,9 @@ class _FocusTimeViewState extends State<FocusTimeView>
         // Store session ID in local storage
         await _storageService.saveString('timer_session_id', _sessionId!);
         print('✅ Backend session created: $_sessionId');
+        
+        // Analytics: Log focus session start
+        await AnalyticsService.logFocusSessionStart(durationMinutes: _initialDurationMinutes);
       }
     } catch (e) {
       print('⚠️ Failed to create backend session: $e');
@@ -725,6 +729,13 @@ class _FocusTimeViewState extends State<FocusTimeView>
         print('✅ Session completed! Rewards: $rewards');
         print('   - Coins: ${rewards['coins'] ?? 0}');
         print('   - XP: ${rewards['xp'] ?? 0}');
+        
+        // Analytics: Log focus session complete
+        await AnalyticsService.logFocusSessionComplete(
+          durationSeconds: completedSeconds,
+          coinsEarned: rewards['coins'] ?? 0,
+          xpEarned: rewards['xp'] ?? 0,
+        );
         
         // Refresh castle and profile data to show updated stats
         final castleViewModel = Provider.of<CastleGroundsViewModel>(context, listen: false);

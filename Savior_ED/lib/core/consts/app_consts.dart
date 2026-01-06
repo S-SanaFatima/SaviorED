@@ -7,6 +7,9 @@ class AppConsts {
   static const String baseUrl = 'https://saviored-backend-production.up.railway.app';
   static const Duration apiTimeout = Duration(seconds: 60); // Increased for Railway cold starts
   
+  // Google Sign-In
+  static const String googleClientId = '529181300486-pgb91al20authinqil85v1ra4avp9enb.apps.googleusercontent.com';
+  
   // Storage Keys
   static const String tokenKey = 'auth_token';
   static const String userIdKey = 'user_id';
