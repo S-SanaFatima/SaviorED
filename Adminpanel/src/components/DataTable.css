@@ -1,8 +1,9 @@
 .data-table-container {
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(26, 71, 42, 0.1);
 }
 
 .data-table {
@@ -11,18 +12,19 @@
 }
 
 .data-table thead {
-  background: #f9fafb;
+  background: linear-gradient(135deg, #1a472a 0%, #2d5a3d 100%);
+  color: #fff;
 }
 
 .data-table th {
   padding: 16px;
   text-align: left;
   font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
+  font-weight: 700;
+  color: #fff;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 2px solid #e5e7eb;
+  border-bottom: 2px solid #3a6b4a;
 }
 
 .data-table tbody tr {
@@ -59,12 +61,14 @@
 }
 
 .table-actions .btn-edit {
-  background: #3b82f6;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
+  font-weight: 600;
 }
 
 .table-actions .btn-edit:hover {
-  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
 .table-actions .btn-delete {
@@ -77,12 +81,14 @@
 }
 
 .table-actions .btn-view {
-  background: #10b981;
+  background: linear-gradient(135deg, #1a472a 0%, #2d5a3d 100%);
   color: white;
+  font-weight: 600;
 }
 
 .table-actions .btn-view:hover {
-  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(26, 71, 42, 0.4);
 }
 
 .table-loading,
@@ -92,9 +98,10 @@
   align-items: center;
   justify-content: center;
   padding: 60px;
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(26, 71, 42, 0.1);
 }
 
 .loading-spinner {

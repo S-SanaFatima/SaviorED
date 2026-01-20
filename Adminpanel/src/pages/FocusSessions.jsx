@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { focusSessionsAPI } from '../services/api';
 import DataTable from '../components/DataTable';
+import Modal from '../components/Modal';
+import ConfirmModal from '../components/ConfirmModal';
 import './FocusSessions.css';
 
 const FocusSessions = () => {
@@ -8,6 +10,9 @@ const FocusSessions = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState(null);
 
   useEffect(() => {
     loadSessions();
@@ -108,14 +113,101 @@ const FocusSessions = () => {
         loading={loading}
         actions={(row) => (
           <>
-            <button className="btn-view" onClick={() => alert(`View session ${row.id}`)}>
+            <button className="btn-view" onClick={() => {
+              setSelectedSession(row);
+              setViewModalOpen(true);
+            }}>
               View
             </button>
-            <button className="btn-delete" onClick={() => alert(`Delete session ${row.id}`)}>
+            <button className="btn-delete" onClick={() => {
+              setSelectedSession(row);
+              setDeleteModalOpen(true);
+            }}>
               Delete
             </button>
           </>
         )}
+      />
+
+      {/* View Modal */}
+      <Modal
+        isOpen={viewModalOpen}
+        onClose={() => {
+          setViewModalOpen(false);
+          setSelectedSession(null);
+        }}
+        title="Session Details"
+        size="medium"
+      >
+        {selectedSession && (
+          <div className="user-details">
+            <div className="detail-row">
+              <span className="detail-label">Session ID:</span>
+              <span className="detail-value">{selectedSession.id}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">User ID:</span>
+              <span className="detail-value">{selectedSession.userId}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Duration:</span>
+              <span className="detail-value">{formatDuration(selectedSession.totalSeconds)}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Status:</span>
+              <span className="detail-value">
+                <span className={`status-badge ${selectedSession.isCompleted ? 'completed' : 'incomplete'}`}>
+                  {selectedSession.isCompleted ? 'Completed' : 'Incomplete'}
+                </span>
+              </span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Rewards:</span>
+              <span className="detail-value">
+                💰 {selectedSession.earnedCoins || 0} | 
+                🪨 {selectedSession.earnedStones || 0} | 
+                🪵 {selectedSession.earnedWood || 0}
+              </span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Start Time:</span>
+              <span className="detail-value">
+                {selectedSession.startTime ? new Date(selectedSession.startTime).toLocaleString() : 'N/A'}
+              </span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">End Time:</span>
+              <span className="detail-value">
+                {selectedSession.endTime ? new Date(selectedSession.endTime).toLocaleString() : 'N/A'}
+              </span>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setSelectedSession(null);
+        }}
+        onConfirm={async () => {
+          if (selectedSession) {
+            try {
+              await focusSessionsAPI.delete(selectedSession.id);
+              loadSessions();
+            } catch (error) {
+              console.error('Error deleting session:', error);
+              alert('Failed to delete session');
+            }
+          }
+        }}
+        title="Delete Session"
+        message={`Are you sure you want to delete session ${selectedSession?.id || ''}? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
       />
 
       <div className="pagination">

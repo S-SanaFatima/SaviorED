@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { treasureChestsAPI } from '../services/api';
 import DataTable from '../components/DataTable';
+import Modal from '../components/Modal';
 import './TreasureChests.css';
 
 const TreasureChests = () => {
@@ -8,6 +9,10 @@ const TreasureChests = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedChest, setSelectedChest] = useState(null);
+  const [editFormData, setEditFormData] = useState({ progressPercentage: '', isUnlocked: false, isClaimed: false });
 
   useEffect(() => {
     loadChests();
@@ -120,15 +125,168 @@ const TreasureChests = () => {
         loading={loading}
         actions={(row) => (
           <>
-            <button className="btn-view" onClick={() => alert(`View chest ${row.id}`)}>
+            <button className="btn-view" onClick={() => {
+              setSelectedChest(row);
+              setViewModalOpen(true);
+            }}>
               View
             </button>
-            <button className="btn-edit" onClick={() => alert(`Edit chest ${row.id}`)}>
+            <button className="btn-edit" onClick={() => {
+              setSelectedChest(row);
+              setEditFormData({
+                progressPercentage: row.progressPercentage || '',
+                isUnlocked: row.isUnlocked || false,
+                isClaimed: row.isClaimed || false,
+              });
+              setEditModalOpen(true);
+            }}>
               Edit
             </button>
           </>
         )}
       />
+
+      {/* View Modal */}
+      <Modal
+        isOpen={viewModalOpen}
+        onClose={() => {
+          setViewModalOpen(false);
+          setSelectedChest(null);
+        }}
+        title="Treasure Chest Details"
+        size="medium"
+      >
+        {selectedChest && (
+          <div className="user-details">
+            <div className="detail-row">
+              <span className="detail-label">Chest ID:</span>
+              <span className="detail-value">{selectedChest.id}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">User ID:</span>
+              <span className="detail-value">{selectedChest.userId}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Progress:</span>
+              <span className="detail-value">{selectedChest.progressPercentage?.toFixed(1) || 0}%</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Status:</span>
+              <span className="detail-value">
+                <span className={`status-badge ${selectedChest.isUnlocked ? 'unlocked' : 'locked'}`}>
+                  {selectedChest.isUnlocked ? '🔓 Unlocked' : '🔒 Locked'}
+                </span>
+                {selectedChest.isClaimed && (
+                  <span className="status-badge claimed" style={{ marginLeft: '8px' }}>✓ Claimed</span>
+                )}
+              </span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Rewards:</span>
+              <span className="detail-value">
+                <div className="rewards-list">
+                  {selectedChest.rewards?.map((reward) => (
+                    <span
+                      key={reward.id}
+                      className="reward-badge"
+                      style={{ backgroundColor: `${reward.colorHex}20`, color: reward.colorHex }}
+                    >
+                      {reward.title}
+                    </span>
+                  ))}
+                </div>
+              </span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Unlocked At:</span>
+              <span className="detail-value">
+                {selectedChest.unlockedAt ? new Date(selectedChest.unlockedAt).toLocaleString() : 'N/A'}
+              </span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Claimed At:</span>
+              <span className="detail-value">
+                {selectedChest.claimedAt ? new Date(selectedChest.claimedAt).toLocaleString() : 'N/A'}
+              </span>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Edit Modal */}
+      <Modal
+        isOpen={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setSelectedChest(null);
+        }}
+        title="Edit Treasure Chest"
+        size="medium"
+      >
+        <div className="edit-form">
+          <div className="form-group">
+            <label htmlFor="edit-progress">Progress (%)</label>
+            <input
+              type="number"
+              id="edit-progress"
+              min="0"
+              max="100"
+              value={editFormData.progressPercentage}
+              onChange={(e) => setEditFormData({ ...editFormData, progressPercentage: e.target.value })}
+              className="form-input"
+            />
+          </div>
+          <div className="form-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="checkbox"
+                checked={editFormData.isUnlocked}
+                onChange={(e) => setEditFormData({ ...editFormData, isUnlocked: e.target.checked })}
+              />
+              Unlocked
+            </label>
+          </div>
+          <div className="form-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="checkbox"
+                checked={editFormData.isClaimed}
+                onChange={(e) => setEditFormData({ ...editFormData, isClaimed: e.target.checked })}
+              />
+              Claimed
+            </label>
+          </div>
+          <div className="modal-footer">
+            <button
+              className="modal-button modal-button-secondary"
+              onClick={() => {
+                setEditModalOpen(false);
+                setSelectedChest(null);
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              className="modal-button modal-button-primary"
+              onClick={async () => {
+                if (selectedChest) {
+                  try {
+                    await treasureChestsAPI.update(selectedChest.id, editFormData);
+                    loadChests();
+                    setEditModalOpen(false);
+                    setSelectedChest(null);
+                  } catch (error) {
+                    console.error('Error updating chest:', error);
+                    alert('Failed to update chest');
+                  }
+                }
+              }}
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <div className="pagination">
         <button

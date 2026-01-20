@@ -5,6 +5,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
+import Economy from './pages/Economy';
+import Settings from './pages/Settings';
 import FocusSessions from './pages/FocusSessions';
 import CastleGrounds from './pages/CastleGrounds';
 import Leaderboard from './pages/Leaderboard';
@@ -33,6 +35,26 @@ function App() {
               <ProtectedRoute>
                 <MainLayout>
                   <Users />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/economy"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <Economy />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <Settings />
                 </MainLayout>
               </ProtectedRoute>
             }
