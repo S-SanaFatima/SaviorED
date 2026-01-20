@@ -3,6 +3,7 @@ import { body, validationResult } from 'express-validator';
 import User from '../models/User.model.js';
 import generateToken from '../utils/generateToken.js';
 import { protect } from '../middleware/auth.middleware.js';
+import { requireDB } from '../config/database.js';
 import passport from 'passport';
 import '../config/passport.js';
 
@@ -13,6 +14,7 @@ const router = express.Router();
 // @access  Public
 router.post(
   '/register',
+  requireDB, // Ensure database is connected before processing
   [
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 6 }),
@@ -91,6 +93,7 @@ router.post(
 // @access  Public
 router.post(
   '/login',
+  requireDB, // Ensure database is connected before processing
   [
     body('email').isEmail().normalizeEmail(),
     body('password').notEmpty(),
@@ -333,6 +336,115 @@ router.post('/logout', protect, (req, res) => {
     message: 'Logged out successfully',
   });
 });
+
+// @route   POST /api/auth/google/mobile
+// @desc    Google OAuth login for mobile apps (using ID token or access token)
+// @access  Public
+router.post(
+  '/google/mobile',
+  requireDB, // Ensure database is connected before processing
+  [
+    // idToken is optional - if null, we'll use accessToken and email for verification
+    body('idToken').optional(),
+    body('accessToken').optional(),
+    body('email').isEmail().withMessage('Valid email is required'),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          errors: errors.array(),
+        });
+      }
+
+      const { idToken, accessToken, email, name, photo } = req.body;
+
+      // Validate that we have either idToken or accessToken
+      if (!idToken && !accessToken) {
+        return res.status(400).json({
+          success: false,
+          errors: [{
+            type: 'field',
+            value: null,
+            msg: 'Either Google ID token or access token is required',
+            path: 'idToken',
+            location: 'body'
+          }],
+        });
+      }
+
+      // Verify Google credentials
+      // Note: In production, you should verify the token with Google's API
+      // For now, we'll create/login user based on the provided info
+      
+      // Check if user exists with this email
+      let user = await User.findOne({ email });
+
+      if (user) {
+        // User exists, update Google info if needed
+        if (!user.googleId) {
+          // Store ID token if available, otherwise use access token
+          user.googleId = idToken || accessToken;
+          user.authMethod = 'google';
+          if (photo && !user.avatar) {
+            user.avatar = photo;
+          }
+          if (name && !user.name) {
+            user.name = name;
+          }
+          await user.save();
+        }
+      } else {
+        // Create new user
+        user = await User.create({
+          email: email,
+          name: name || 'Google User',
+          avatar: photo,
+          googleId: idToken || accessToken, // Store token as identifier
+          authMethod: 'google',
+        });
+
+        // Create initial castle for user
+        const Castle = (await import('../models/Castle.model.js')).default;
+        await Castle.create({
+          userId: user._id,
+          level: 1,
+          levelName: 'CASTLE',
+          progressPercentage: 0,
+          nextLevel: 2,
+          levelRequirements: {
+            coins: 100,
+            stones: 50,
+            wood: 30,
+          },
+        });
+      }
+
+      const token = generateToken(user._id);
+
+      res.json({
+        success: true,
+        token,
+        user: {
+          id: user._id,
+          email: user.email,
+          name: user.name,
+          avatar: user.avatar,
+          level: user.level,
+          experiencePoints: user.experiencePoints || 0,
+        },
+      });
+    } catch (error) {
+      console.error('Google mobile login error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Server error',
+      });
+    }
+  }
+);
 
 export default router;
 

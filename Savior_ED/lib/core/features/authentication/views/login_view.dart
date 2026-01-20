@@ -265,7 +265,21 @@ class _LoginViewState extends State<LoginView> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(50.sp),
-          onTap: () {},
+          onTap: () async {
+            final authViewModel = context.read<AuthViewModel>();
+            final success = await authViewModel.loginWithGoogle();
+            if (!mounted) return;
+            if (success) {
+              // Navigate to castle grounds on successful login
+              Navigator.pushReplacementNamed(context, AppRoutes.castleGrounds);
+            } else {
+              ToastService.showError(
+                context,
+                title: "Google Sign In",
+                description: authViewModel.errorMessage ?? "Google sign in is not available. Please use email/password.",
+              );
+            }
+          },
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

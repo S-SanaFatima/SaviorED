@@ -15,17 +15,37 @@ class ApiService {
         baseUrl: AppConsts.baseUrl,
         connectTimeout: AppConsts.apiTimeout,
         receiveTimeout: AppConsts.apiTimeout,
+        sendTimeout: AppConsts.apiTimeout,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
+        validateStatus: (status) {
+          return status != null && status < 500; // Accept all status codes < 500
+        },
       ),
     );
+    
+    // Enable logging in debug mode
+    if (true) { // Always log for now to debug
+      _dio.interceptors.add(LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+        requestHeader: true,
+        responseHeader: false,
+        error: true,
+      ));
+    }
 
     // Add interceptors
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          // Log request details
+          print('🚀 API Request: ${options.method} ${options.baseUrl}${options.path}');
+          print('📦 Request Data: ${options.data}');
+          print('🔗 Full URL: ${options.uri}');
+          
           // Add auth token if available
           final prefs = await SharedPreferences.getInstance();
           final token = prefs.getString(AppConsts.tokenKey);
@@ -34,8 +54,34 @@ class ApiService {
           }
           return handler.next(options);
         },
+        onResponse: (response, handler) {
+          print('✅ API Response: ${response.statusCode} ${response.requestOptions.path}');
+          print('📦 Response Data: ${response.data}');
+          return handler.next(response);
+        },
         onError: (error, handler) {
-          // Handle errors globally
+          // Log error details
+          print('❌ API Error: ${error.type}');
+          print('🔗 URL: ${error.requestOptions.uri}');
+          print('📦 Error Data: ${error.response?.data}');
+          print('💬 Error Message: ${error.message}');
+          
+          // Handle errors globally with better error messages
+          if (error.type == DioExceptionType.connectionTimeout ||
+              error.type == DioExceptionType.receiveTimeout ||
+              error.type == DioExceptionType.sendTimeout) {
+            error = DioException(
+              requestOptions: error.requestOptions,
+              type: error.type,
+              error: 'Connection timeout. Please check your internet connection.',
+            );
+          } else if (error.type == DioExceptionType.connectionError) {
+            error = DioException(
+              requestOptions: error.requestOptions,
+              type: error.type,
+              error: 'Connection refused. Please check if the server is running and accessible.',
+            );
+          }
           return handler.next(error);
         },
       ),

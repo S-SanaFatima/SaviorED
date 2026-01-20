@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
 import '../../../widgets/gradient_background.dart';
+import '../../../services/toast_service.dart';
 import '../../../consts/app_sizes.dart';
 import '../../../routes/app_routes.dart';
+import '../viewmodels/auth_viewmodel.dart';
 
 /// Welcome Back / Authentication Options Screen - Matching mockup exactly
 class WelcomeView extends StatelessWidget {
@@ -99,7 +102,7 @@ class WelcomeView extends StatelessWidget {
                 SizedBox(height: 1.5.h),
                 
                 // Google Sign In Button - White with border matching mockup
-                _buildGoogleButton(),
+                _buildGoogleButton(context),
                 
                 SizedBox(height: 1.5.h),
                 
@@ -130,7 +133,7 @@ class WelcomeView extends StatelessWidget {
     );
   }
 
-  Widget _buildGoogleButton() {
+  Widget _buildGoogleButton(BuildContext context) {
     return SizedBox(
       width: double.infinity,
       child: Material(
@@ -139,8 +142,20 @@ class WelcomeView extends StatelessWidget {
         elevation: 0,
         child: InkWell(
           borderRadius: BorderRadius.circular(28.sp),
-          onTap: () {
-            // Handle Google sign in
+          onTap: () async {
+            final authViewModel = context.read<AuthViewModel>();
+            final success = await authViewModel.loginWithGoogle();
+            if (!context.mounted) return;
+            if (success) {
+              // Navigate to castle grounds on successful login
+              Navigator.pushReplacementNamed(context, AppRoutes.castleGrounds);
+            } else {
+              ToastService.showError(
+                context,
+                title: "Google Sign In",
+                description: authViewModel.errorMessage ?? "Google sign in is not available. Please use email/password.",
+              );
+            }
           },
           child: Container(
             padding: EdgeInsets.symmetric(vertical: 1.5.h),
